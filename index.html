@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Lakehouse Factory</title>
+<meta name="description" content="Pipeline de dados GCP (Pub/Sub, Datastream, Dataflow, BigQuery, dbt, Composer, Looker) simulado como um galpão: autoscaling, testes dbt, quarentena, replay e SLA.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Roboto:wght@400;500;700&family=Roboto+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="src/styles.css">
+</head>
+<body>
+<div class="app">
+  <header class="top">
+    <div class="brand">
+      <svg viewBox="0 0 40 40" aria-hidden="true">
+        <rect x="2" y="14" width="36" height="24" rx="3" fill="#2c4a73"/>
+        <polygon points="0,15 20,3 40,15" fill="#3f5170"/>
+        <rect x="7" y="24" width="8" height="7" fill="#c4823f"/><rect x="16" y="24" width="8" height="7" fill="#c3cbd6"/><rect x="25" y="24" width="8" height="7" fill="#e9b92f"/>
+        <rect x="6" y="20" width="28" height="2" fill="#f6b93b"/>
+      </svg>
+      <div>
+        <h1>Lakehouse Factory</h1>
+        <p>Operação do pipeline de pedidos · Pub/Sub, Datastream e GCS → Dataflow → BigQuery + dbt → Looker</p>
+      </div>
+    </div>
+    <div class="controls">
+      <span class="live"><i></i>AO VIVO <b id="clock">--:--</b></span>
+      <button class="btn primary" id="btnInc" type="button">Simular incidente</button>
+      <button class="btn" id="btnPause" type="button">Pausar</button>
+      <div class="seg" role="group" aria-label="Velocidade">
+        <button type="button" data-speed="1" aria-pressed="true">1×</button>
+        <button type="button" data-speed="2" aria-pressed="false">2×</button>
+      </div>
+    </div>
+  </header>
+
+  <div class="filters" aria-label="Filtros do painel">
+    <span class="chip"><b>Projeto</b> <span id="f-project">—</span></span>
+    <span class="chip"><b>Região</b> <span id="f-region">—</span></span>
+    <span class="chip"><b>Ambiente</b> prod</span>
+    <span class="chip"><b>Período</b> últimos 60 min</span>
+  </div>
+
+  <section class="kpis" aria-label="Indicadores">
+    <div class="tile kpi" id="k-api" data-state="ok">
+      <div class="k-lab">orders-api</div>
+      <div class="k-val"><span id="v-api">—</span><small>req/s</small></div>
+      <div class="k-sub" id="s-api">—</div>
+    </div>
+    <div class="tile kpi" id="k-backlog" data-state="ok">
+      <div class="k-lab">Backlog do Pub/Sub</div>
+      <div class="k-val"><span id="v-backlog">—</span><small>msgs não confirmadas</small></div>
+      <div class="k-sub" id="s-backlog">—</div>
+    </div>
+    <div class="tile kpi" id="k-rows" data-state="ok">
+      <div class="k-lab">Linhas ingeridas hoje</div>
+      <div class="k-val"><span id="v-rows">—</span></div>
+      <div class="k-sub" id="s-rows">—</div>
+    </div>
+    <div class="tile kpi" id="k-dq" data-state="ok">
+      <div class="k-lab">Testes dbt aprovados</div>
+      <div class="k-val"><span id="v-dq">—</span><small>%</small></div>
+      <div class="k-sub" id="s-dq">—</div>
+    </div>
+    <div class="tile kpi" id="k-sla" data-state="ok">
+      <div class="k-lab">Dentro do SLA de 60 min</div>
+      <div class="k-val"><span id="v-sla">—</span><small>%</small></div>
+      <div class="k-sub" id="s-sla">—</div>
+    </div>
+    <div class="tile kpi" id="k-cost" data-state="idle">
+      <div class="k-lab">Custo de execução</div>
+      <div class="k-val"><span id="v-cost">—</span><small>/h</small></div>
+      <div class="k-sub" id="s-cost">—</div>
+    </div>
+  </section>
+
+  <section class="scene-wrap" aria-label="Cena do pipeline">
+    <div class="scene">
+      <canvas id="cv" role="img" aria-label="Corte lateral de um galpão: fontes do GCP entregam caixas de dados por esteiras; empilhadeiras (workers do Dataflow) operam as camadas raw, staging e marts do BigQuery; testes dbt mandam lotes inválidos para a quarentena no porão; os marts seguem para Looker, Vertex AI e uma API."></canvas>
+      <aside class="inspector" id="inspector" hidden>
+        <div class="eyebrow"><span id="insp-eyebrow"></span><button class="btn small" type="button" id="insp-close">Fechar</button></div>
+        <div id="insp-body"></div>
+      </aside>
+      <div class="scene-hint">clique em qualquer objeto da cena</div>
+    </div>
+  </section>
+
+  <section class="grid">
+    <div class="tile"><div class="t-head"><h3>Requisições da orders-api</h3><span>req/s</span></div><div class="chart" id="c-api"></div></div>
+    <div class="tile"><div class="t-head"><h3>Backlog da assinatura no Pub/Sub</h3><span>mil msgs · alerta em 2 mi</span></div><div class="chart" id="c-backlog"></div></div>
+    <div class="tile"><div class="t-head"><h3>Testes dbt por minuto</h3><span><i class="key ok"></i>aprovados <i class="key crit"></i>reprovados</span></div><div class="chart" id="c-tests"></div></div>
+    <div class="tile"><div class="t-head"><h3>Freshness por fonte</h3><span>min desde o último lote entregue</span></div><div class="chart" id="c-fresh"></div></div>
+    <div class="tile"><div class="t-head"><h3>Workers Dataflow</h3><span>autoscaling · máx. 9</span></div><div class="chart" id="c-workers"></div></div>
+    <div class="tile"><div class="t-head"><h3>Rastreamento de lote</h3><span id="track-meta"></span></div><div id="track-body"></div></div>
+    <div class="tile wide"><div class="t-head"><h3>Camadas no BigQuery · hoje</h3><span>separação: dedup por event_id e filtro de pedidos de teste no staging</span></div>
+      <div class="tbl-wrap"><table class="tbl"><thead><tr><th>Camada</th><th>Tabela</th><th>Fila</th><th>Entraram</th><th>Saíram</th><th>Removidas</th></tr></thead><tbody id="t-layers"></tbody></table></div>
+      <div class="sep" id="sep"></div>
+    </div>
+    <div class="tile events"><div class="t-head"><h3>Eventos</h3></div><ol id="events"></ol></div>
+    <div class="tile full"><div class="t-head"><h3>Linha do incidente</h3><span id="incident-meta"></span></div><div id="incident-body"></div></div>
+  </section>
+
+  <footer>
+    <span>Dados simulados no navegador · 1 s de simulação = 1 min de operação · preços ilustrativos</span>
+    <span>Canvas 2D e SVG, JavaScript puro, sem engine e sem build</span>
+  </footer>
+</div>
+<script type="module" src="src/main.js"></script>
+</body>
+</html>
