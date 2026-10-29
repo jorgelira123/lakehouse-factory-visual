@@ -4,11 +4,15 @@ A GCP data pipeline drawn as the floor plan of a working warehouse. Pub/Sub, Dat
 
 Volumes are sized like a large e-commerce operation (about 2,400 API requests per second, roughly 500 million rows a day). Every animation maps to something that happens in production: autoscaling with cold start, idle workers that keep billing, data contracts, quarantine, replay, freshness and SLA.
 
-**Live demo:** https://jorgelira123.github.io/lakehouse-factory/ &nbsp;·&nbsp; [Versão em português](#versão-em-português)
+### ▶ [Open the live demo](https://jorgelira123.github.io/lakehouse-factory-visual/)
+
+[Versão em português](#versão-em-português)
 
 > **Note:** the interface is in Portuguese. The table below maps every element of the scene, with its on-screen label, to what it represents.
 
-![Lakehouse Factory at rest](docs/preview.png)
+![Lakehouse Factory running the incident scenario: traffic jumps to 6×, a schema change is caught by dbt tests, Dataflow autoscales and replay brings everything back](docs/demo.gif)
+
+*The page running in the browser during **Simular incidente** (recorded at 2× and sped up). [Try it yourself](https://jorgelira123.github.io/lakehouse-factory-visual/).*
 
 ## The incident
 
@@ -85,7 +89,7 @@ Um pipeline de dados no GCP desenhado como um galpão funcionando. Pub/Sub, Data
 
 Clique em **Simular incidente**: um deploy faz o Pub/Sub mandar 6× o volume e muda o schema sem aviso, o contrato do `stg_orders` segura os lotes ruins antes do mart, o Dataflow escala, o hotfix entra, o replay devolve tudo para o staging e o pipeline volta ao normal sem perder nenhum lote.
 
-Demo: https://jorgelira123.github.io/lakehouse-factory/ · Para rodar localmente: `python3 -m http.server 8000` e abra `http://localhost:8000`.
+Demo ao vivo: https://jorgelira123.github.io/lakehouse-factory-visual/ · Para rodar localmente: `python3 -m http.server 8000` e abra `http://localhost:8000`.
 
 ## License
 
